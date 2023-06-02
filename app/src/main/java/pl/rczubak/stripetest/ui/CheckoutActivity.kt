@@ -1,12 +1,21 @@
-package pl.rczubak.stripetest
+package pl.rczubak.stripetest.ui
 
 import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.Toast
+import androidx.activity.compose.setContent
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.messaging.ktx.messaging
 import com.stripe.android.paymentsheet.PaymentSheet
 import com.stripe.android.paymentsheet.PaymentSheetResult
 import com.stripe.android.paymentsheet.addresselement.AddressDetails
@@ -17,6 +26,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import pl.rczubak.stripetest.databinding.ActivityCheckoutBinding
+import pl.rczubak.stripetest.ui.home.HomeScreen
 import java.io.IOException
 
 class CheckoutActivity : AppCompatActivity() {
@@ -49,23 +59,40 @@ class CheckoutActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityCheckoutBinding.inflate(layoutInflater)
-        val view = binding.root
-        setContentView(view)
+        Firebase.messaging.subscribeToTopic("order")
+            .addOnCompleteListener { task ->
+                var msg = "Subscribed"
+                if (!task.isSuccessful) {
+                    msg = "Subscribe failed"
+                }
+                Log.d("Push_init", msg)
+                Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
+            }
+        setContent {
+            val navController = rememberNavController()
+            MaterialTheme {
+                NavHost(navController = navController, startDestination = "home") {
+                    composable("home") {
+                        HomeScreen()
+                    }
+                }
+            }
+        }
 
-        // Hook up the pay button
-        payButton = binding.payButton
-        payButton.setOnClickListener(::onPayClicked)
-        payButton.isEnabled = false
-
-        paymentSheet = PaymentSheet(this, ::onPaymentSheetResult)
-
-        // Hook up the address button
-        addressButton = binding.addressButton
-        addressButton.setOnClickListener(::onAddressClicked)
-
-        addressLauncher = AddressLauncher(this, ::onAddressLauncherResult)
-
-        fetchPaymentIntent()
+//        // Hook up the pay button
+//        payButton = binding.payButton
+//        payButton.setOnClickListener(::onPayClicked)
+//        payButton.isEnabled = false
+//
+//        paymentSheet = PaymentSheet(this, ::onPaymentSheetResult)
+//
+//        // Hook up the address button
+//        addressButton = binding.addressButton
+//        addressButton.setOnClickListener(::onAddressClicked)
+//
+//        addressLauncher = AddressLauncher(this, ::onAddressLauncherResult)
+//
+//        fetchPaymentIntent()
     }
 
     private fun fetchPaymentIntent() {
