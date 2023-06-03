@@ -1,19 +1,29 @@
 package pl.rczubak.stripetest.ui
 
+import android.content.res.Resources.Theme
 import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.Color
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.compose.CoffeeTheme
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
+import com.google.android.gms.auth.api.identity.Identity
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.messaging.ktx.messaging
 import com.stripe.android.paymentsheet.PaymentSheet
@@ -21,12 +31,19 @@ import com.stripe.android.paymentsheet.PaymentSheetResult
 import com.stripe.android.paymentsheet.addresselement.AddressDetails
 import com.stripe.android.paymentsheet.addresselement.AddressLauncher
 import com.stripe.android.paymentsheet.addresselement.AddressLauncherResult
+import kotlinx.coroutines.launch
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
+import org.koin.androidx.compose.koinViewModel
 import pl.rczubak.stripetest.databinding.ActivityCheckoutBinding
 import pl.rczubak.stripetest.ui.home.HomeScreen
+import pl.rczubak.stripetest.ui.home.HomeViewModel
+import pl.rczubak.stripetest.ui.login.GoogleAuthUiClient
+import pl.rczubak.stripetest.ui.login.LoginScreen
+import pl.rczubak.stripetest.ui.login.LoginViewModel
+import pl.rczubak.stripetest.ui.login.model.LoginEvent
 import java.io.IOException
 
 class CheckoutActivity : AppCompatActivity() {
@@ -35,6 +52,12 @@ class CheckoutActivity : AppCompatActivity() {
         private const val BACKEND_URL = "http://integracja.radoslav.pl"
     }
 
+    private val googleAuthUiClient by lazy {
+        GoogleAuthUiClient(
+            context = applicationContext,
+            oneTapClient = Identity.getSignInClient(applicationContext)
+        )
+    }
     private lateinit var paymentIntentClientSecret: String
     private lateinit var paymentSheet: PaymentSheet
 
@@ -49,9 +72,7 @@ class CheckoutActivity : AppCompatActivity() {
     private val addressConfiguration = AddressLauncher.Configuration(
         additionalFields = AddressLauncher.AdditionalFieldsConfiguration(
             phone = AddressLauncher.AdditionalFieldsConfiguration.FieldConfiguration.REQUIRED
-        ),
-        allowedCountries = setOf("US", "CA", "GB"),
-        title = "Shipping Address"
+        ), allowedCountries = setOf("US", "CA", "GB"), title = "Shipping Address"
     )
 
     private lateinit var binding: ActivityCheckoutBinding
@@ -60,20 +81,66 @@ class CheckoutActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityCheckoutBinding.inflate(layoutInflater)
         Firebase.messaging.subscribeToTopic("order")
-            .addOnCompleteListener { task ->
-                var msg = "Subscribed"
-                if (!task.isSuccessful) {
-                    msg = "Subscribe failed"
-                }
-                Log.d("Push_init", msg)
-                Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
-            }
         setContent {
+            val systemUiController = rememberSystemUiController()
+            val useDarkIcons = !isSystemInDarkTheme()
+
+            DisposableEffect(systemUiController, useDarkIcons) {
+                systemUiController.setSystemBarsColor(
+                    color =  Color.Gray,
+                    darkIcons = useDarkIcons
+                )
+
+
+                onDispose {}
+            }
             val navController = rememberNavController()
-            MaterialTheme {
-                NavHost(navController = navController, startDestination = "home") {
+            CoffeeTheme {
+                NavHost(navController = navController, startDestination = "login") {
+
                     composable("home") {
-                        HomeScreen()
+                        val viewModel: HomeViewModel = koinViewModel()
+                        HomeScreen(
+                            navController,
+                            viewModel = viewModel,
+                            userData = googleAuthUiClient.getSignedInUser(),
+                            onLogout = {
+                                lifecycleScope.launch {
+                                    googleAuthUiClient.signOut()
+                                    navController.popBackStack()
+                                }
+                            }
+                        )
+                    }
+                    composable("login") {
+                        val viewModel: LoginViewModel = koinViewModel()
+                        val uiState by viewModel.uiState.collectAsState()
+                        val launcher =
+                            rememberLauncherForActivityResult(contract = ActivityResultContracts.StartIntentSenderForResult(),
+                                onResult = { result ->
+                                    if (result.resultCode == RESULT_OK) {
+                                        lifecycleScope.launch {
+                                            val signInResult = googleAuthUiClient.signInWithIntent(
+                                                intent = result.data ?: return@launch
+                                            )
+                                            viewModel.setEvent(
+                                                LoginEvent.OnSignInResult(
+                                                    signInResult
+                                                )
+                                            )
+                                        }
+                                    }
+                                })
+                        LoginScreen(navController, viewModel, onGoogleSignIn = {
+                            lifecycleScope.launch {
+                                val signInIntentSender = googleAuthUiClient.signIn()
+                                launcher.launch(
+                                    IntentSenderRequest.Builder(
+                                        signInIntentSender ?: return@launch
+                                    ).build()
+                                )
+                            }
+                        })
                     }
                 }
             }
@@ -109,37 +176,30 @@ class CheckoutActivity : AppCompatActivity() {
         val mediaType = "application/json; charset=utf-8".toMediaType()
 
         val body = shoppingCartContent.toRequestBody(mediaType)
-        val request = Request.Builder()
-            .url(url)
-            .post(body)
-            .build()
+        val request = Request.Builder().url(url).post(body).build()
 
-        OkHttpClient()
-            .newCall(request)
-            .enqueue(object : Callback {
-                override fun onFailure(call: Call, e: IOException) {
-                    showAlert("Failed to load data", "Error: $e")
-                }
+        OkHttpClient().newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                showAlert("Failed to load data", "Error: $e")
+            }
 
-                override fun onResponse(call: Call, response: Response) {
-                    if (!response.isSuccessful) {
-                        showAlert("Failed to load page", "Error: $response")
-                    } else {
-                        val responseData = response.body?.string()
-                        val responseJson = responseData?.let { JSONObject(it) } ?: JSONObject()
-                        paymentIntentClientSecret = responseJson.getString("clientSecret")
-                        runOnUiThread { payButton.isEnabled = true }
-                        Log.i(TAG, "Retrieved PaymentIntent")
-                    }
+            override fun onResponse(call: Call, response: Response) {
+                if (!response.isSuccessful) {
+                    showAlert("Failed to load page", "Error: $response")
+                } else {
+                    val responseData = response.body?.string()
+                    val responseJson = responseData?.let { JSONObject(it) } ?: JSONObject()
+                    paymentIntentClientSecret = responseJson.getString("clientSecret")
+                    runOnUiThread { payButton.isEnabled = true }
+                    Log.i(TAG, "Retrieved PaymentIntent")
                 }
-            })
+            }
+        })
     }
 
     private fun showAlert(title: String, message: String? = null) {
         runOnUiThread {
-            val builder = AlertDialog.Builder(this)
-                .setTitle(title)
-                .setMessage(message)
+            val builder = AlertDialog.Builder(this).setTitle(title).setMessage(message)
             builder.setPositiveButton("Ok", null)
             builder.create().show()
         }

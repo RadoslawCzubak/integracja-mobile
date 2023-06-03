@@ -3,7 +3,7 @@ package pl.rczubak.stripetest.domain.model
 import java.time.LocalDateTime
 
 data class Reservation(
-    val id: String,
+    val id: Int,
     val tableId: Int,
     val reservationTime: LocalDateTime,
     val reservedAt: LocalDateTime,

@@ -1,27 +1,28 @@
 package pl.rczubak.stripetest.data.service
 
 import pl.rczubak.stripetest.data.model.*
+import retrofit2.Response
 import retrofit2.http.*
 
 const val BASE_URL = "http://integracja.radoslav.pl"
 
 interface CafeAPI {
     @POST("/reservation")
-    fun postReservation(@Body reservationForm: ReservationRemote)
+    suspend fun postReservation(@Body reservationForm: ReservationRemote): ReservationResponse
 
     @GET("/tables/availability")
-    fun getTablesAvailability(@Query("time") isoTime: String): List<TableAvailabilityItem>
+    suspend fun getTablesAvailability(@Query("time") isoTime: String): List<TableAvailabilityItem>
 
     @DELETE("/reservation/{reservation_id}")
-    fun deleteReservation(@Path("reservation_id") reservationId: Int)
+    suspend fun deleteReservation(@Path("reservation_id") reservationId: Int): Response<Unit>
 
     @GET("/menu")
-    fun getMenu(): List<MenuItemRemote>
+    suspend fun getMenu(): List<MenuItemRemote>
 
     @POST("/order")
-    fun createOrder(): OrderResponse
+    suspend fun createOrder(): OrderResponse
 
     @POST("/create-payment-intent/{order_id}")
-    fun createPaymentIntent(@Path("order_id") orderId: Int): PaymentIntentMetadataResponse
+    suspend fun createPaymentIntent(@Path("order_id") orderId: Int): PaymentIntentMetadataResponse
 
 }
