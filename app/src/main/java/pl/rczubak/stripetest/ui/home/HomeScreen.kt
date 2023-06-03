@@ -43,12 +43,14 @@ import java.time.format.DateTimeFormatter
 fun HomeScreen(
     navController: NavController,
     userData: UserData?,
+    padding: PaddingValues,
     viewModel: HomeViewModel,
     onLogout: () -> Unit
 ) {
     val dateTime = remember { mutableStateOf(LocalDateTime.now()) }
     val uiState by viewModel.uiState.collectAsState()
     HomeScreenContent(
+        padding = padding,
         availableTables = uiState.availableTables,
         userData = userData,
         onTableCheckBtnClicked = { time ->
@@ -74,6 +76,7 @@ fun HomeScreen(
 
 @Composable
 fun HomeScreenContent(
+    padding: PaddingValues,
     userData: UserData?,
     availableTables: List<Table>?,
     chosenTableId: Int?,
@@ -91,7 +94,9 @@ fun HomeScreenContent(
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top,
-        modifier = Modifier.verticalScroll(scrollState)
+        modifier = Modifier
+            .verticalScroll(scrollState)
+            .padding(padding)
     ) {
         userData?.let {
             UserInfoBar(userData = userData, onLogout = onLogout)
@@ -134,7 +139,7 @@ fun HomeScreenContent(
 
 @Composable
 fun ReservationRow(reservation: Reservation, onReservationDelete: (Int) -> Unit) {
-    Column() {
+    Column(Modifier.padding(vertical = 8.dp)) {
         Text(
             "Rezerwacja", modifier = Modifier.padding(horizontal = 16.dp), style = TextStyle(
                 fontSize = 20.sp,
@@ -334,6 +339,7 @@ fun TableItem(
 fun HomeScreenPreview() {
     CoffeeTheme {
         HomeScreenContent(
+            padding = PaddingValues(),
             onTableCheckBtnClicked = {},
             availableTables = listOf(
                 Table(123, numberOfSeats = 5),

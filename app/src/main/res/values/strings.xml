@@ -12,4 +12,8 @@
     <string name="hello_second_fragment">Hello second fragment. Arg: %1$s</string>
     <string name="channel_name">integration_order</string>
     <string name="channel_description">sadasd</string>
+    <string name="reservation">Rezerwacje</string>
+    <string name="login">Login</string>
+    <string name="order">Zamówienia</string>
+    <string name="employee">Pracownik</string>
 </resources>

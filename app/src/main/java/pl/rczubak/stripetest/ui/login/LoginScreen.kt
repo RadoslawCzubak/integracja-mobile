@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import pl.rczubak.stripetest.R
 import pl.rczubak.stripetest.ui.login.model.LoginEvent
+import pl.rczubak.stripetest.ui.navigation.Screen
 
 @Composable
 fun LoginScreen(
@@ -40,7 +41,7 @@ fun LoginScreen(
     LaunchedEffect(key1 = uiState.navigateToLogin) {
         if (uiState.navigateToLogin) {
             viewModel.setEvent(LoginEvent.LoggedIn)
-            navController.navigate("home")
+            navController.navigate(Screen.Reservation.route)
         }
     }
     LoginScreenContent(
