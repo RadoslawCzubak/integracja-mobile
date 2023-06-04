@@ -20,9 +20,15 @@ interface CafeAPI {
     suspend fun getMenu(): List<MenuItemRemote>
 
     @POST("/order")
-    suspend fun createOrder(): OrderResponse
+    suspend fun createOrder(@Body body: OrderForm): OrderResponse
+
+    @GET("/order")
+    suspend fun getOrders(): List<OrderResponse>
 
     @POST("/create-payment-intent/{order_id}")
     suspend fun createPaymentIntent(@Path("order_id") orderId: Int): PaymentIntentMetadataResponse
+
+    @GET("/loyalty/points")
+    suspend fun getLoyaltyPoints(): Int
 
 }

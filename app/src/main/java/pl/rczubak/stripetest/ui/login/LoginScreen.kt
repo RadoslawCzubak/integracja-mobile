@@ -41,7 +41,11 @@ fun LoginScreen(
     LaunchedEffect(key1 = uiState.navigateToLogin) {
         if (uiState.navigateToLogin) {
             viewModel.setEvent(LoginEvent.LoggedIn)
-            navController.navigate(Screen.Reservation.route)
+            navController.navigate(Screen.Splash.route){
+                popUpTo(Screen.Splash.route){
+                    inclusive = true
+                }
+            }
         }
     }
     LoginScreenContent(

@@ -2,8 +2,6 @@ package pl.rczubak.stripetest.ui
 
 import android.os.Bundle
 import android.util.Log
-import android.view.View
-import android.widget.Button
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -34,27 +32,29 @@ import com.google.firebase.ktx.Firebase
 import com.google.firebase.messaging.ktx.messaging
 import com.stripe.android.paymentsheet.PaymentSheet
 import com.stripe.android.paymentsheet.PaymentSheetResult
-import com.stripe.android.paymentsheet.addresselement.AddressDetails
-import com.stripe.android.paymentsheet.addresselement.AddressLauncher
-import com.stripe.android.paymentsheet.addresselement.AddressLauncherResult
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import okhttp3.*
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONObject
+import org.koin.android.ext.android.inject
 import org.koin.androidx.compose.koinViewModel
+import pl.rczubak.stripetest.data.service.CafeAPI
 import pl.rczubak.stripetest.databinding.ActivityCheckoutBinding
 import pl.rczubak.stripetest.ui.home.HomeScreen
 import pl.rczubak.stripetest.ui.home.HomeViewModel
 import pl.rczubak.stripetest.ui.login.GoogleAuthUiClient
 import pl.rczubak.stripetest.ui.login.LoginScreen
 import pl.rczubak.stripetest.ui.login.LoginViewModel
+import pl.rczubak.stripetest.ui.login.UserData
 import pl.rczubak.stripetest.ui.login.model.LoginEvent
 import pl.rczubak.stripetest.ui.navigation.Screen
 import pl.rczubak.stripetest.ui.order.OrderScreen
-import java.io.IOException
+import pl.rczubak.stripetest.ui.order.OrderViewModel
+import pl.rczubak.stripetest.ui.order.model.OrderEvent
+import pl.rczubak.stripetest.ui.splash.SplashScreen
 
 class CheckoutActivity : AppCompatActivity() {
+    private val cafeAPI: CafeAPI by inject()
+
     companion object {
         private const val TAG = "CheckoutActivity"
         private const val BACKEND_URL = "http://integracja.radoslav.pl"
@@ -66,22 +66,10 @@ class CheckoutActivity : AppCompatActivity() {
             oneTapClient = Identity.getSignInClient(applicationContext)
         )
     }
+
+    private var onResult: () -> Unit = {}
     private lateinit var paymentIntentClientSecret: String
     private lateinit var paymentSheet: PaymentSheet
-
-    private lateinit var payButton: Button
-
-    private lateinit var addressLauncher: AddressLauncher
-
-    private var shippingDetails: AddressDetails? = null
-
-    private lateinit var addressButton: Button
-
-    private val addressConfiguration = AddressLauncher.Configuration(
-        additionalFields = AddressLauncher.AdditionalFieldsConfiguration(
-            phone = AddressLauncher.AdditionalFieldsConfiguration.FieldConfiguration.REQUIRED
-        ), allowedCountries = setOf("US", "CA", "GB"), title = "Shipping Address"
-    )
 
     private lateinit var binding: ActivityCheckoutBinding
 
@@ -91,7 +79,6 @@ class CheckoutActivity : AppCompatActivity() {
         Screen.Employee
     )
 
-    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityCheckoutBinding.inflate(layoutInflater)
@@ -126,7 +113,11 @@ class CheckoutActivity : AppCompatActivity() {
                                 onLogout = {
                                     lifecycleScope.launch {
                                         googleAuthUiClient.signOut()
-                                        navController.popBackStack()
+                                        navController.navigate(Screen.Login.route) {
+                                            popUpTo(Screen.Login.route) {
+                                                inclusive = true
+                                            }
+                                        }
                                     }
                                 }
                             )
@@ -164,64 +155,56 @@ class CheckoutActivity : AppCompatActivity() {
                     }
 
                     composable(Screen.Order.route) {
+                        val viewModel: OrderViewModel = koinViewModel()
                         ScaffoldWithBottomBar(navController = navController) { padding ->
-                            OrderScreen(padding)
+                            OrderScreen(
+                                paddingValues = padding,
+                                userData = googleAuthUiClient.getSignedInUser() ?: UserData(
+                                    "",
+                                    "Anonymous",
+                                    ""
+                                ),
+                                onLogout = {
+                                    lifecycleScope.launch {
+                                        googleAuthUiClient.signOut()
+                                        navController.navigate(Screen.Login.route) {
+                                            popUpTo(Screen.Login.route) {
+                                                inclusive = true
+                                            }
+                                        }
+                                    }
+                                }, onPayOrder = {
+                                    lifecycleScope.launch {
+                                        fetchPaymentIntent(it)
+                                        val configuration =
+                                            PaymentSheet.Configuration("Integracja Cafe, Inc.")
+                                        with(Dispatchers.Main) {
+                                            // Present Payment Sheet
+                                            onResult = {
+                                                viewModel.setEvent(OrderEvent.RefreshOrder)
+                                            }
+                                            paymentSheet.presentWithPaymentIntent(
+                                                paymentIntentClientSecret,
+                                                configuration
+                                            )
+                                        }
+                                    }
+                                })
                         }
+                    }
+                    composable(Screen.Splash.route) {
+                        SplashScreen(navController = navController)
                     }
                 }
             }
         }
-
-
-//        // Hook up the pay button
-//        payButton = binding.payButton
-//        payButton.setOnClickListener(::onPayClicked)
-//        payButton.isEnabled = false
-//
-//        paymentSheet = PaymentSheet(this, ::onPaymentSheetResult)
-//
-//        // Hook up the address button
-//        addressButton = binding.addressButton
-//        addressButton.setOnClickListener(::onAddressClicked)
-//
-//        addressLauncher = AddressLauncher(this, ::onAddressLauncherResult)
-//
-//        fetchPaymentIntent()
+        paymentSheet = PaymentSheet(this@CheckoutActivity) {
+            onPaymentSheetResult(it, onResult)
+        }
     }
 
-    private fun fetchPaymentIntent() {
-        val url = "$BACKEND_URL/create-payment-intent/27"
-
-        val shoppingCartContent = """
-            {
-                "items": [
-                    {"id":"xl-tshirt"}
-                ]
-            }
-        """
-
-        val mediaType = "application/json; charset=utf-8".toMediaType()
-
-        val body = shoppingCartContent.toRequestBody(mediaType)
-        val request = Request.Builder().url(url).post(body).build()
-
-        OkHttpClient().newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                showAlert("Failed to load data", "Error: $e")
-            }
-
-            override fun onResponse(call: Call, response: Response) {
-                if (!response.isSuccessful) {
-                    showAlert("Failed to load page", "Error: $response")
-                } else {
-                    val responseData = response.body?.string()
-                    val responseJson = responseData?.let { JSONObject(it) } ?: JSONObject()
-                    paymentIntentClientSecret = responseJson.getString("clientSecret")
-                    runOnUiThread { payButton.isEnabled = true }
-                    Log.i(TAG, "Retrieved PaymentIntent")
-                }
-            }
-        })
+    private suspend fun fetchPaymentIntent(orderId: Int) {
+        paymentIntentClientSecret = cafeAPI.createPaymentIntent(orderId).clientSecret
     }
 
     private fun showAlert(title: String, message: String? = null) {
@@ -238,21 +221,8 @@ class CheckoutActivity : AppCompatActivity() {
         }
     }
 
-    private fun onPayClicked(view: View) {
-        val configuration = PaymentSheet.Configuration("Example, Inc.")
-
-        // Present Payment Sheet
-        paymentSheet.presentWithPaymentIntent(paymentIntentClientSecret, configuration)
-    }
-
-    private fun onAddressClicked(view: View) {
-        addressLauncher.present(
-            publishableKey = "pk_test_51N7DrUHoWwrUTQHV88Ip45mOZD44CCNHD0Wbc5maOW5zv5gQ74H03x8WsYgtg17Th4qa2wEB2AD6wwZ5WaWGBJcO00ZGYMJJHb",
-            configuration = addressConfiguration
-        )
-    }
-
-    private fun onPaymentSheetResult(paymentResult: PaymentSheetResult) {
+    private fun onPaymentSheetResult(paymentResult: PaymentSheetResult, onResult: () -> Unit) {
+        onResult.invoke()
         when (paymentResult) {
             is PaymentSheetResult.Completed -> {
                 showToast("Payment complete!")
@@ -262,18 +232,6 @@ class CheckoutActivity : AppCompatActivity() {
             }
             is PaymentSheetResult.Failed -> {
                 showAlert("Payment failed", paymentResult.error.localizedMessage)
-            }
-        }
-    }
-
-    private fun onAddressLauncherResult(result: AddressLauncherResult) {
-        // TODO: Handle result and update your UI
-        when (result) {
-            is AddressLauncherResult.Succeeded -> {
-                shippingDetails = result.address
-            }
-            is AddressLauncherResult.Canceled -> {
-                // TODO: Handle cancel
             }
         }
     }

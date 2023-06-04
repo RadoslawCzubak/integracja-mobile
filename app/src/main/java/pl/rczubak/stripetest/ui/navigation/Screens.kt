@@ -18,4 +18,5 @@ sealed class Screen(
     object Order : Screen("order", R.string.order, Icons.Filled.Coffee)
     object Login : Screen("login", R.string.login)
     object Employee : Screen("login", R.string.employee, Icons.Filled.EmojiPeople)
+    object Splash : Screen("splash", R.string.splash, Icons.Filled.EmojiPeople)
 }

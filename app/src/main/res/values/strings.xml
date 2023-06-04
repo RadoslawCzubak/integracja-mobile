@@ -16,4 +16,5 @@
     <string name="login">Login</string>
     <string name="order">Zamówienia</string>
     <string name="employee">Pracownik</string>
+    <string name="splash">Splash</string>
 </resources>

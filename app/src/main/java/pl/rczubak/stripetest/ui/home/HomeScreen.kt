@@ -7,7 +7,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
@@ -26,12 +25,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import com.example.compose.CoffeeTheme
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import pl.rczubak.stripetest.R
 import pl.rczubak.stripetest.domain.model.Reservation
 import pl.rczubak.stripetest.domain.model.Table
+import pl.rczubak.stripetest.ui.components.UserInfoBar
 import pl.rczubak.stripetest.ui.home.model.HomeContract
 import pl.rczubak.stripetest.ui.login.UserData
 import java.time.LocalDate
@@ -198,41 +198,6 @@ fun ReservationRow(reservation: Reservation, onReservationDelete: (Int) -> Unit)
 }
 
 @Composable
-fun UserInfoBar(
-    userData: UserData, onLogout: () -> Unit
-) {
-    Row(
-        horizontalArrangement = Arrangement.Start,
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-            .fillMaxWidth()
-    ) {
-        AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current).data(userData.profilePictureUrl)
-                .crossfade(true).build(),
-            placeholder = painterResource(id = pl.rczubak.stripetest.R.drawable.ic_launcher_background),
-            contentDescription = "user image",
-            modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-        )
-        Spacer(modifier = Modifier.width(16.dp))
-        Text(
-            text = userData.username ?: "Anonymous", style = TextStyle(
-                fontSize = 16.sp
-            )
-        )
-        Spacer(modifier = Modifier.weight(1f))
-        Button(
-            onClick = { onLogout() }, modifier = Modifier.height(40.dp)
-        ) {
-            Text(text = "Wyloguj")
-        }
-    }
-}
-
-@Composable
 fun TableTimePicker(
     updateDateTime: (LocalDateTime) -> Unit,
     dateTime: LocalDateTime,
@@ -256,9 +221,11 @@ fun TableTimePicker(
     )
     Column(modifier = Modifier.padding(vertical = 16.dp)) {
         Text(
-            text = dateTime.format(DateTimeFormatter.ISO_DATE_TIME),
-            style = TextStyle(fontSize = 16.sp, textAlign = TextAlign.Center),
-            modifier = Modifier.fillMaxWidth()
+            text = dateTime.format(DateTimeFormatter.ofPattern("HH:mm dd-MM-yyyy")),
+            style = TextStyle(fontSize = 24.sp, textAlign = TextAlign.Center),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
         )
         Row() {
             Spacer(modifier = Modifier.width(20.dp))

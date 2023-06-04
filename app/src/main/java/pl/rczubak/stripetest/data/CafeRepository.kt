@@ -1,8 +1,6 @@
 package pl.rczubak.stripetest.data
 
-import pl.rczubak.stripetest.data.model.ReservationRemote
-import pl.rczubak.stripetest.data.model.ReservationResponse
-import pl.rczubak.stripetest.data.model.TableAvailabilityItem
+import pl.rczubak.stripetest.data.model.*
 import pl.rczubak.stripetest.data.service.CafeAPI
 
 class CafeRepository(
@@ -18,5 +16,25 @@ class CafeRepository(
 
     suspend fun cancelReservation(reservationId: Int): Boolean {
         return cafeAPI.deleteReservation(reservationId = reservationId).code() == 202
+    }
+
+    suspend fun getMenu(): List<MenuItemRemote> {
+        return cafeAPI.getMenu()
+    }
+
+    suspend fun createOrder(productIds: List<Int>): OrderResponse {
+        return cafeAPI.createOrder(OrderForm(productIds))
+    }
+
+    suspend fun getOrders(): List<OrderResponse> {
+        return cafeAPI.getOrders()
+    }
+
+    suspend fun getPaymentInfo(paymentId: Int): PaymentIntentMetadataResponse {
+        return cafeAPI.createPaymentIntent(paymentId)
+    }
+
+    suspend fun getLoyaltyPoints(): Int {
+        return cafeAPI.getLoyaltyPoints()
     }
 }
