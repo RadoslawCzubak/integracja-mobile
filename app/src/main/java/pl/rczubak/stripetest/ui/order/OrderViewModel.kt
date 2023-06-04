@@ -75,7 +75,11 @@ class OrderViewModel(
             onResult = {
                 setState { state -> state.copy(isOrderListLoading = false) }
                 it.onSuccess {
-                    setState { state -> state.copy(orders = it) }
+                    setState { state ->
+                        state.copy(orders = it.sortedByDescending {
+                            it.id
+                        })
+                    }
                 }
             }
         )
