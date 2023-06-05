@@ -37,4 +37,12 @@ class CafeRepository(
     suspend fun getLoyaltyPoints(): Int {
         return cafeAPI.getLoyaltyPoints()
     }
+
+    suspend fun getEmployeeOrders(): List<OrderResponse> {
+        return cafeAPI.getOrdersToPrepare()
+    }
+
+    suspend fun updateOrder(orderId: Int): OrderResponse {
+        return cafeAPI.updateOrder(orderId)
+    }
 }

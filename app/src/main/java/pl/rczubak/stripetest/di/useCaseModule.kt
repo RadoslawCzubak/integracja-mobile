@@ -13,4 +13,6 @@ val useCaseModule = module {
     factory { CreateOrderUseCase(get()) }
     factoryOf(::GetMenuUseCase)
     factoryOf(::GetLoyaltyPointsUseCase)
+    factoryOf(::GetEmployeeOrderUseCase)
+    factoryOf(::UpdateOrderUseCase)
 }

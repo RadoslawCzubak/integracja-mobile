@@ -31,4 +31,11 @@ interface CafeAPI {
     @GET("/loyalty/points")
     suspend fun getLoyaltyPoints(): Int
 
+    @PUT("/employee/order/{order_id}")
+    suspend fun updateOrder(@Path("order_id") orderId: Int, @Query("status") status: String = "delivered"): OrderResponse
+
+
+    @GET("/employee/order")
+    suspend fun getOrdersToPrepare(): List<OrderResponse>
+
 }

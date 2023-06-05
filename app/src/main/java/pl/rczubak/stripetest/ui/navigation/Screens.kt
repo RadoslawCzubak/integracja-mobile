@@ -17,6 +17,6 @@ sealed class Screen(
     object Reservation : Screen("home", R.string.reservation, Icons.Filled.TableBar)
     object Order : Screen("order", R.string.order, Icons.Filled.Coffee)
     object Login : Screen("login", R.string.login)
-    object Employee : Screen("login", R.string.employee, Icons.Filled.EmojiPeople)
+    object Employee : Screen("employee", R.string.employee, Icons.Filled.EmojiPeople)
     object Splash : Screen("splash", R.string.splash, Icons.Filled.EmojiPeople)
 }

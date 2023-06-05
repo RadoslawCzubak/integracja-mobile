@@ -1,9 +1,11 @@
 package pl.rczubak.stripetest.ui.order
 
+import androidx.compose.animation.Animatable
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -104,6 +106,7 @@ fun OrderScreenContent(
 ) {
     val scrollState = rememberScrollState()
     Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .verticalScroll(scrollState)
@@ -159,9 +162,19 @@ fun OrderMenu(
 
 @Composable
 fun MenuItemView(item: MenuItem, onItemClick: (Int) -> Unit, isChosen: Boolean) {
+    val color = remember {
+        Animatable(Color.White)
+    }
+    LaunchedEffect(key1 = isChosen) {
+        color.animateTo(
+            if (isChosen) Color(0xffbdffbd) else Color.White, animationSpec = tween(
+                durationMillis = 500
+            )
+        )
+    }
     Card(elevation = CardDefaults.cardElevation(4.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isChosen) Color(0xffbdffbd) else Color.White
+            containerColor = color.value
         ),
         modifier = Modifier
             .fillMaxWidth()
@@ -171,6 +184,7 @@ fun MenuItemView(item: MenuItem, onItemClick: (Int) -> Unit, isChosen: Boolean) 
             .clickable { onItemClick(item.id) }
 
     ) {
+
         Row(
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,

@@ -39,6 +39,7 @@ import org.koin.android.ext.android.inject
 import org.koin.androidx.compose.koinViewModel
 import pl.rczubak.stripetest.data.service.CafeAPI
 import pl.rczubak.stripetest.databinding.ActivityCheckoutBinding
+import pl.rczubak.stripetest.ui.employee.EmployeeScreen
 import pl.rczubak.stripetest.ui.home.HomeScreen
 import pl.rczubak.stripetest.ui.home.HomeViewModel
 import pl.rczubak.stripetest.ui.login.GoogleAuthUiClient
@@ -102,6 +103,13 @@ class CheckoutActivity : AppCompatActivity() {
                     navController = navController,
                     startDestination = Screen.Login.route,
                 ) {
+                    composable(Screen.Employee.route){
+                        ScaffoldWithBottomBar(navController = navController) {
+                            EmployeeScreen(
+                                paddingValues = it
+                            )
+                        }
+                    }
                     composable(Screen.Reservation.route) {
                         ScaffoldWithBottomBar(navController = navController) { padding ->
                             val viewModel: HomeViewModel = koinViewModel()

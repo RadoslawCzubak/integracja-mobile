@@ -3,6 +3,8 @@ package pl.rczubak.stripetest.ui.home
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.widget.DatePicker
+import androidx.compose.animation.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -26,8 +28,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.compose.CoffeeTheme
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import pl.rczubak.stripetest.R
 import pl.rczubak.stripetest.domain.model.Reservation
 import pl.rczubak.stripetest.domain.model.Table
@@ -270,9 +270,17 @@ fun TableAvailabilityView(
 fun TableItem(
     tableId: Int, nbOfSeats: Int, isChosen: Boolean = false, onItemClick: (Int) -> Unit
 ) {
+    val color = remember {
+        Animatable(Color.White)
+    }
+    LaunchedEffect(key1 = isChosen) {
+        color.animateTo(if (isChosen) Color(0xffbdffbd) else Color.White, animationSpec = tween(
+            durationMillis = 500
+        ) )
+    }
     Card(elevation = CardDefaults.cardElevation(4.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isChosen) Color(0xffbdffbd) else Color.White
+            containerColor = color.value
         ),
         modifier = Modifier
             .fillMaxWidth()

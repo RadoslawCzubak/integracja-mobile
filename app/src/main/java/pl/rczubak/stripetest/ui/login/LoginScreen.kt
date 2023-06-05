@@ -1,7 +1,9 @@
 package pl.rczubak.stripetest.ui.login
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -12,7 +14,10 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.paint
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -20,15 +25,14 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.compose.CoffeeTheme
 import pl.rczubak.stripetest.R
 import pl.rczubak.stripetest.ui.login.model.LoginEvent
 import pl.rczubak.stripetest.ui.navigation.Screen
 
 @Composable
 fun LoginScreen(
-    navController: NavController,
-    viewModel: LoginViewModel,
-    onGoogleSignIn: () -> Unit
+    navController: NavController, viewModel: LoginViewModel, onGoogleSignIn: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val username = rememberSaveable {
@@ -41,22 +45,20 @@ fun LoginScreen(
     LaunchedEffect(key1 = uiState.navigateToLogin) {
         if (uiState.navigateToLogin) {
             viewModel.setEvent(LoginEvent.LoggedIn)
-            navController.navigate(Screen.Splash.route){
-                popUpTo(Screen.Splash.route){
+            navController.navigate(Screen.Splash.route) {
+                popUpTo(Screen.Splash.route) {
                     inclusive = true
                 }
             }
         }
     }
-    LoginScreenContent(
-        usernameText = username.value,
+    LoginScreenContent(usernameText = username.value,
         passwordText = password.value,
         onUsernameChange = { username.value = it },
         onPasswordChange = { password.value = it },
         onLoginClick = { viewModel.setEvent(LoginEvent.Login(username.value, password.value)) },
         onGoogleLoginClick = onGoogleSignIn,
-        fakeLogin = { viewModel.setEvent(LoginEvent.Login("radek.cz1@o2.pl", "Haslo123!")) }
-    )
+        fakeLogin = { viewModel.setEvent(LoginEvent.Login("radek.cz1@o2.pl", "Haslo123!")) })
 }
 
 @Composable
@@ -70,29 +72,59 @@ fun LoginScreenContent(
     fakeLogin: () -> Unit
 ) {
     Column(
+        verticalArrangement = Arrangement.SpaceBetween,
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-        modifier = Modifier.fillMaxHeight()
+        modifier = Modifier
+            .background(Color.Black)
+            .paint(
+                painterResource(id = R.drawable.coffee_bg),
+                contentScale = ContentScale.FillHeight,
+                alpha = 0.4f
+            )
+            .padding(bottom = 20.dp)
+            .fillMaxSize()
     ) {
-        LoginInputs(
-            usernameText, passwordText, onUsernameChange, onPasswordChange
-        )
-        Spacer(modifier = Modifier.height(40.dp))
-        Button(
-            onClick = onLoginClick,
+        Spacer(modifier = Modifier.weight(1f))
+        Image(
+            painter = painterResource(id = R.drawable.logo), contentDescription = "Logo",
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp),
-            shape = RoundedCornerShape(8.dp),
+        )
+        Spacer(modifier = Modifier.weight(1f))
+        Box(
+            modifier = Modifier
+                .padding(8.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color(0xD2FFFFFF))
         ) {
-            Text(text = "Zaloguj")
-        }
-        Spacer(modifier = Modifier.height(10.dp))
-        GoogleSignInButton(onClick = onGoogleLoginClick)
-        Button(onClick = { fakeLogin() }) {
-            Text(text = "Fake Login")
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(16.dp)
+
+            ) {
+
+                LoginInputs(
+                    usernameText, passwordText, onUsernameChange, onPasswordChange
+                )
+                Spacer(modifier = Modifier.height(40.dp))
+                Button(
+                    onClick = onLoginClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp),
+                ) {
+                    Text(text = "Zaloguj")
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+                GoogleSignInButton(onClick = onGoogleLoginClick)
+                Button(onClick = { fakeLogin() }) {
+                    Text(text = "Fake Login")
+                }
+            }
         }
     }
+
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -110,9 +142,7 @@ fun LoginInputs(
             value = usernameText,
             onValueChange = onUsernameChange,
             label = { Text(text = "E-mail") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp),
+            modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(
                 capitalization = KeyboardCapitalization.None,
                 autoCorrect = false,
@@ -121,21 +151,17 @@ fun LoginInputs(
             ),
         )
         Spacer(modifier = Modifier.height(20.dp))
-        OutlinedTextField(
-            value = passwordText,
+        OutlinedTextField(value = passwordText,
             onValueChange = onPasswordChange,
             label = { Text(text = "Hasło") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp),
+            modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(
                 capitalization = KeyboardCapitalization.None,
                 autoCorrect = false,
                 keyboardType = KeyboardType.Password,
             ),
             trailingIcon = {
-                val image = if (passwordVisible)
-                    Icons.Filled.Visibility
+                val image = if (passwordVisible) Icons.Filled.Visibility
                 else Icons.Filled.VisibilityOff
 
                 // Please provide localized description for accessibility services
@@ -144,8 +170,7 @@ fun LoginInputs(
                 IconButton(onClick = { passwordVisible = !passwordVisible }) {
                     Icon(imageVector = image, description)
                 }
-            }
-        )
+            })
     }
 }
 
@@ -153,17 +178,15 @@ fun LoginInputs(
 fun GoogleSignInButton(onClick: () -> Unit) {
     Button(
         onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 16.dp, end = 16.dp),
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
         colors = ButtonDefaults.buttonColors(
-            contentColor = Color.White,
-            containerColor = Color.Black
+            contentColor = Color.White, containerColor = Color.Black
         )
     ) {
         Image(
-            painter = painterResource(id = R.drawable.ic_google_sign_in), contentDescription = "",
+            painter = painterResource(id = R.drawable.ic_google_sign_in),
+            contentDescription = "",
             modifier = Modifier.height(24.dp)
         )
         Text(text = "Sign in with Google", modifier = Modifier.padding(6.dp))
@@ -173,11 +196,13 @@ fun GoogleSignInButton(onClick: () -> Unit) {
 @Preview(showSystemUi = true)
 @Composable
 fun LoginScreenPreview() {
-    LoginScreenContent(usernameText = "Siema",
-        passwordText = "Siema",
-        onPasswordChange = {},
-        onUsernameChange = {},
-        onLoginClick = {},
-        onGoogleLoginClick = {},
-        fakeLogin = {})
+    CoffeeTheme {
+        LoginScreenContent(usernameText = "Siema",
+            passwordText = "Siema",
+            onPasswordChange = {},
+            onUsernameChange = {},
+            onLoginClick = {},
+            onGoogleLoginClick = {},
+            fakeLogin = {})
+    }
 }
